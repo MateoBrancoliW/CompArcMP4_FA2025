@@ -5,8 +5,7 @@ module control_unit(
     input logic reset,
     input logic [6:0] opcode,
     input logc [2:0] funct3,
-    input logic funct7,
-
+    input logic [6:0] funct7,
     output logic pc_write,
     output logic pc_update,
     output logic reg_write,
@@ -19,11 +18,12 @@ module control_unit(
     output logic [2:0]alu_control,
     output logic [1:0] imm_src,
 );
+
 localparam FETCH = 4'd0;
 localparam DECODE = 4'd1;
 localparam MEM_ADR = 4'd2;
 localparam MEM_READ = 4'd3;
-localparam MEM_WB = 4'd4;
+localparam MEM_WB = 4'd4; //write back
 localparam MEM_WRITE = 4'd5;
 localparam EXECUTE_R = 4'd6;
 localparam ALU_WB = 4'd7;
@@ -58,6 +58,14 @@ always_comb begin
         7'b1101111: begin // JAL
             imm_src = 2'b11;
         end
+
+        7'b0010111: begin // U-Type (Add Upper Immediately)
+        end
+        7'b0110111: begin //U-Type (Load Upper Imediately)
+        end
+        7'b1100111: begin //JALR (Jump And Link Register)
+        end
+
     endcase
 end
 
@@ -70,7 +78,7 @@ always_comb begin
         2'b01: begin 
           alu_control = 3'b001; 
         end
-        2'b10 begin 
+        2'b10 begin
             case (funct3)
                 3'b000: begin
                     if ({op[5],funct7} == 2'b11) begin
@@ -84,6 +92,7 @@ always_comb begin
                 3'b111: alu_control = 3'b010; // XOR
             endcase
         end
+        2'b
     endcase
 end
     
@@ -175,6 +184,21 @@ always_comb begin
             alu_op = 2'b10;
             next_state = ALU_WB;
         end
+
+        LUI begin
+            alu_src_a = 2'b00;
+            alu_src_b = 2'b01;
+            alu_op = 3'b000;
+            next_state = ALU_WB
+        end
+
+        AUI begin
+            alu_src_a <= 2'b00;
+            lu_src_b <= 2'b01;
+            alu_op <= 3'b000;
+            next_state = ALU_WB
+        end
+
         JAL begin
             pc_update = 1'b1;
             alu_src_a = 2'b01;
@@ -182,6 +206,13 @@ always_comb begin
             alu_op = 2'b00;
             result_src = 2'b00;
             next_state = ALU_WB;
+        end
+        JALR begin
+            pc_update = 1'b1;
+            alu_src_a <= 2'b00;
+            alu_src_b <= 2'b10;
+            alu_op <= 3'b000;
+            next_state = ALU_WB
         end
         BEQ begin
             alu_src_a = 2'b10;

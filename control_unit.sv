@@ -1,46 +1,51 @@
 // Control Unit for a simple multi-cycle RISC-V core
 module control_unit(
-    input  logic       zero,
-    input  logic       clk,
-    input  logic       reset,
+    input  logic zero,
+    input  logic clk,
+    input  logic reset,
     input  logic [6:0] opcode,
     input  logic [2:0] funct3,
     input  logic [6:0] funct7,
-
-    output logic       pc_write,
-    output logic       pc_update,
-    output logic       reg_write,
-    output logic       mem_write,
-    output logic       ir_write,
+    output logic pc_write,
+    output logic pc_update,
+    output logic reg_write,
+    output logic mem_write,
+    output logic ir_write,
     output logic [1:0] result_src,
     output logic [1:0] alu_src_b,
     output logic [1:0] alu_src_a,
-    output logic       adr_src,
+    output logic adr_src,
     output logic [2:0] alu_control,
     output logic [2:0] imm_src
 );
 
     // FSM states
-    localparam FETCH      = 4'd0;
-    localparam DECODE     = 4'd1;
-    localparam MEM_ADR    = 4'd2;
-    localparam MEM_READ   = 4'd3;
-    localparam MEM_WB     = 4'd4;
-    localparam MEM_WRITE  = 4'd5;
-    localparam EXECUTE_R  = 4'd6;
-    localparam ALU_WB     = 4'd7;
-    localparam EXECUTE_I  = 4'd8;
-    localparam JAL        = 4'd9;
-    localparam BEQ        = 4'd10;
-    localparam LUI        = 4'd11;
-    localparam AUI        = 4'd12;
-    localparam JALR       = 4'd13;
+    localparam FETCH      = 5'd0;
+    localparam DECODE     = 5'd1;
+    localparam MEM_ADR    = 5'd2;
+    localparam MEM_READ   = 5'd3;
+    localparam MEM_WB     = 5'd4;
+    localparam MEM_WRITE  = 5'd5;
+    localparam EXECUTE_R  = 5'd6;
+    localparam ALU_WB     = 5'd7;
+    localparam EXECUTE_I  = 5'd8;
+    localparam JAL = 5'd9;
+    localparam BEQ = 5'd10;
+    localparam LUI = 5'd11;
+    localparam AUI = 5'd12;
+    localparam JALR = 5'd13;
+    localparam BNE = 5'd14;
+    localparam BLT = 5'd15;
+    localparam BGE = 5'd16;
+    localparam BLTU = 5'd17;
+    localparam BGEU = 5'd18;
+    localparam AUIPC = 5'd19;
 
     // State + control internals
     logic [3:0] state = FETCH;
     logic[3:0] next_state;
     logic [1:0] alu_op;
-    logic       branch;
+    logic branch;
 
     // ----------------------
     // State register
@@ -57,16 +62,16 @@ module control_unit(
         imm_src = 2'b00;
 
         unique case (opcode)
-            7'b0000011: imm_src = 2'b00; // Load (I-type)
-            7'b0100011: imm_src = 2'b01; // Store (S-type)
-            7'b0110011: imm_src = 2'b00; // R-type (no imm used)
-            7'b1100011: imm_src = 2'b10; // Branch (B-type)
-            7'b0010011: imm_src = 2'b00; // I-type ALU
-            7'b1101111: imm_src = 2'b11; // JAL (J-type)
-            7'b1100111: imm_src = 2'b00; // JALR (I-type)
-            7'b0110111: imm_src = 2'b11; // LUI (U-type)
-            7'b0010111: imm_src = 2'b11; // AUIPC (U-type)
-            default:    imm_src = 2'b00;
+        7'b0000011: imm_src = 3'b000; // Load (I-type)
+        7'b0100011: imm_src = 3'b001; // Store (S-type)
+        7'b0110011: imm_src = 3'b000; // R-type (no imm used)
+        7'b1100011: imm_src = 3'b010; // Branch (B-type)
+        7'b0010011: imm_src = 3'b000; // I-type ALU
+        7'b1101111: imm_src = 3'b011; // JAL (J-type)
+        7'b1100111: imm_src = 3'b000; // JALR (I-type)
+        7'b0110111: imm_src = 3'b100; // LUI (U-type)
+        7'b0010111: imm_src = 3'b100; // AUIPC (U-type)
+        default:    imm_src = 3'b000;
         endcase
     end
 
@@ -104,7 +109,6 @@ module control_unit(
                             alu_control = 3'b000; // ADD
                         end
                     end
-
                     3'b111: alu_control = 3'b010; // AND
                     3'b110: alu_control = 3'b011; // OR
                     3'b100: alu_control = 3'b100; // XOR
@@ -135,14 +139,11 @@ module control_unit(
         reg_write  = 1'b0;
 
         unique case (state)
-            // ---------------
-            // FETCH
-            // ---------------
             FETCH: begin
                 adr_src    = 1'b0;      // PC as address
                 ir_write   = 1'b1;      // load instruction
                 pc_update  = 1'b1;      // PC = PC + 4
-                alu_src_a  = 2'b00;     // use PC
+                alu_src_a  = 2'b01;     // use PC
                 alu_src_b  = 2'b10;     // constant 4
                 alu_op     = 2'b00;     // ADD
                 result_src = 2'b10;     // ALU result -> PC
@@ -261,6 +262,8 @@ module control_unit(
                 alu_op    = 2'b00; // ADD (0 + imm)
                 result_src = 2'b00;
                 reg_write  = 1'b1;
+                pc_update  = 1'b0;
+                branch = 1'b0;
                 next_state = FETCH;
             end
 

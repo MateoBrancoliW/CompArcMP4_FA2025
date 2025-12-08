@@ -15,14 +15,12 @@ module alu(
     input  logic [31:0] alu_a,
     input  logic [31:0] alu_b,
     output logic [31:0] alu_c,
-    output logic        zero,
-    output logic        less_than,
-    output logic        signed_less_than
+    output logic zero,
+    output logic less_than,
+    output logic signed_less_than
 );
 
-    // Main ALU operation
     always_comb begin
-        // default to avoid latches
         alu_c = 32'b0;
 
         case (alu_operation)
@@ -31,16 +29,15 @@ module alu(
             `ALU_AND: alu_c = alu_a & alu_b;
             `ALU_OR:  alu_c = alu_a | alu_b;
             `ALU_XOR: alu_c = alu_a ^ alu_b;
-            `ALU_SLL: alu_c = alu_a <<  alu_b[4:0];  // use shamt
+            `ALU_SLL: alu_c = alu_a <<  alu_b[4:0];
             `ALU_SRL: alu_c = alu_a >>  alu_b[4:0];
             `ALU_SRA: alu_c = alu_a >>> alu_b[4:0];
             default:  alu_c = 32'b0;
         endcase
     end
 
-    // Flags
-    assign zero             = (alu_c == 32'b0);
+    assign zero = (alu_c == 32'b0);
     assign signed_less_than = ($signed(alu_a) < $signed(alu_b));
-    assign less_than        = (alu_a < alu_b);
+    assign less_than = (alu_a < alu_b);
 
-endmodule : alu
+endmodule: alu

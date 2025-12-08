@@ -4,11 +4,13 @@
 module mp4_tb;
 
     logic clk = 0;
+    logic reset =1;
     logic LED, RGB_R, RGB_G, RGB_B;
 
 
     top u0 (
         .clk            (clk), 
+        .reset          (reset),
         .LED            (LED), 
         .RGB_R          (RGB_R), 
         .RGB_G          (RGB_G), 
@@ -18,6 +20,8 @@ module mp4_tb;
     initial begin
         $dumpfile("mp4.vcd");
         $dumpvars(0, mp4_tb);
+        #40
+        reset = 0;
         #100000
         $finish;
     end

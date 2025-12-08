@@ -127,8 +127,8 @@ module top (
     );
 
     mux3_1 alu_src_a_mux(
-        .in0 (32'b0),
-        .in1 (imem_address),
+        .in0 (imem_address),
+        .in1 (old_pc),
         .in2 (A),
         .sel (alu_src_a),
         .out (alu_a)
@@ -159,8 +159,8 @@ module top (
 
     always_ff @(posedge clk)begin 
         A <= read_data1;
+        write_data <= read_data2;
         rd_2_out <= read_data2;
-        write_data <= res;
     end
     always_ff @(posedge clk) begin
             alu_out <= alu_c;

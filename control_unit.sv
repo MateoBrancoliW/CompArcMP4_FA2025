@@ -59,7 +59,7 @@ module control_unit(
     // ----------------------
     always_comb begin
         // default
-        imm_src = 2'b00;
+        imm_src = 3'b00;
 
         unique case (opcode)
         7'b0000011: imm_src = 3'b000; // Load (I-type)
@@ -257,14 +257,10 @@ module control_unit(
             // LUI: load upper imm into rd
             // ---------------
             LUI: begin
-                alu_src_a = 2'b00; // zero
+                alu_src_a = 2'b11;
                 alu_src_b = 2'b01; // imm
                 alu_op    = 2'b00; // ADD (0 + imm)
-                result_src = 2'b00;
-                reg_write  = 1'b1;
-                pc_update  = 1'b0;
-                branch = 1'b0;
-                next_state = FETCH;
+                next_state = ALU_WB;
             end
 
             // ---------------

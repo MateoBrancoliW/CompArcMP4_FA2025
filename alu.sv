@@ -9,9 +9,12 @@
 `define alu_sra = 3'b111
 module alu(
   input wire [2:0] alu_operation,
-  input int [7:0] alu_a,
-  input int [7:0] alu_b,
-  output int [7:0] alu_c
+  input int [31:0] alu_a,
+  input int [31:0] alu_b,
+  output int [31:0] alu_c,
+  output int zero,
+  output int less_than
+  output int signed_less_than
 );
   always @(*) begin
     case (alu_operation):
@@ -25,4 +28,8 @@ module alu(
     `alu_sra: alu_c = alu_a >>> alu_b;
     endcase
   end
+
+  assign zero = (alu_c == 32'b0);
+  assign signed_less_than = ($signed(alu_a) < $signed(alu_b));
+  assign less_than = (alu_a < alu_b);
 endmodule: alu

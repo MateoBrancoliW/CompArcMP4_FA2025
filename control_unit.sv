@@ -41,6 +41,8 @@ module control_unit(
     localparam BGE = 5'd16;
     localparam BLTU = 5'd17;
     localparam BGEU = 5'd18;
+    localparam IDLE = 5'd19;
+    localparam JALR_RUN = 5'd20;
 
     // State + control internals
     logic [4:0] state = FETCH;
@@ -96,7 +98,7 @@ always_comb begin
 
         2'b01: begin
             // branch compare (e.g., SUB)
-            alu_control = 3'b001;
+            alu_control = 4'b0001;
         end
 
         2'b10: begin
@@ -120,7 +122,8 @@ always_comb begin
                 3'b101: alu_control = funct7[5] ? 3'b111 : 3'b110;
 
                 // SLT handled by external compare logic, ALU can just do SUB/ADD
-                3'b010: alu_control = 3'b000; // SLT (handled externally)
+                3'b010: alu_control = 4'b0101; // SLT (handled externally)
+                3'b011: alu_control = 4'b1001; // SLTU (handled externally)
 
                 default: alu_control = 3'b000;
             endcase
@@ -153,13 +156,10 @@ end
                 adr_src    = 1'b0;      // PC as address
                 ir_write   = 1'b1;      // load instruction
                 pc_update  = 1'b1;      // PC = PC + 4
-                alu_src_a  = 2'b01;     // use PC
+                alu_src_a  = 2'b00;     // use PC
                 alu_src_b  = 2'b10;     // constant 4
                 alu_op     = 2'b00;     // ADD
                 result_src = 2'b10;     // ALU result -> PC
-                branch     = 1'b0;
-                mem_write  = 1'b0;
-                reg_write  = 1'b0;
                 next_state = DECODE;
             end
 
@@ -181,6 +181,10 @@ end
                          case (funct3)
                             3'b000: next_state = BEQ;   // BEQ
                             3'b100: next_state = BLT;   // BLT
+                            3'b101: next_state = BGE;   // BGE
+                            3'b001: next_state = BNE;   // BNE
+                            3'b110: next_state = BLTU;  // BLTU
+                            3'b111: next_state = BGEU;  // BGEU
                             default: next_state = FETCH;
                         endcase
                     end
@@ -289,7 +293,7 @@ end
                 // here we might compute target PC = PC + imm
                 pc_update = 1'b1; // update PC from ALU result
                 alu_src_a = 2'b01; // PC
-                alu_src_b = 2'b01; // imm
+                alu_src_b = 2'b10; // imm
                 alu_op    = 2'b00; // ADD
                 result_src = 2'b00;
                 next_state = ALU_WB;
@@ -299,15 +303,24 @@ end
             // JALR: jump to rs1 + imm, write rd = PC+4
             // ---------------
             JALR: begin
-                pc_update = 1'b1;
-                alu_src_a = 2'b10; // rs1
-                alu_src_b = 2'b01; // imm
+                alu_src_a = 2'b01; // rs1
+                alu_src_b = 2'b10; // imm
                 alu_op    = 2'b00; // ADD
                 result_src = 2'b10; // PC+4 to rd
                 reg_write  = 1'b1;
+                next_state = JALR_RUN;
+            end
+            JALR_RUN: begin
+                 alu_src_a = 2'b10;   // rs1
+                alu_src_b = 2'b01;   // Imm
+                alu_op = 2'b00;     // add
+                result_src = 2'b10; 
+                pc_update = 1;      // update PC
                 next_state = FETCH;
             end
-
+            IDLE: begin
+                next_state = FETCH;
+            end
             // ---------------
             // BEQ: branch if zero
             // ---------------
@@ -318,13 +331,7 @@ end
                 branch    = 1'b1;
                 result_src = 2'b00;
 
-                if (zero) begin
-                    pc_update = 1'b1; // branch taken
-                end else begin
-                    pc_update = 1'b0; // no update from branch path
-                end
-
-                next_state = FETCH;
+                next_state = IDLE;
             end
 
                         // ---------------
@@ -337,9 +344,6 @@ end
                 branch     = 1'b1;
                 result_src = 2'b00;
 
-                if (!zero) begin
-                    pc_update = 1'b1; // branch taken
-                end
 
                 next_state = FETCH;
             end
@@ -420,6 +424,6 @@ end
     end
 
     // pc_write: actual write-enable for PC
-    assign pc_write = pc_update;
+    assign pc_write = pc_update | branch & zero;
 
 endmodule

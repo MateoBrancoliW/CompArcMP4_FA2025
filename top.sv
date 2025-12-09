@@ -118,9 +118,7 @@ module top (
         .alu_a          (alu_a),
         .alu_b          (alu_b),
         .alu_c          (alu_c),
-        .zero          (zero),
-        .less_than      (less_than),
-        .signed_less_than (signed_less_than)
+        .zero          (zero)
     );
     mux2_1  adr_mux(
         .in0 (imem_address),

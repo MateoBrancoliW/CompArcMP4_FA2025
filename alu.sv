@@ -29,15 +29,15 @@ module alu(
         case (alu_operation)
             `ALU_ADD: begin
                 alu_c = alu_a + alu_b;
-                zero = 0
+                zero = 0;
             end
             `ALU_SUB: begin 
                 alu_c = alu_a - alu_b;
                 if(alu_a == alu_b) begin
-                    zero = 1
+                    zero = 1;
                 end
                 else begin
-                    zero = 0
+                    zero = 0;
                 end
             end
 
@@ -56,7 +56,7 @@ module alu(
                 zero = alu_c[0];
             end
             default: begin
-            end1
+            end
         endcase
     end
 endmodule: alu

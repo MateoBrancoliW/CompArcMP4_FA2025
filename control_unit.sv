@@ -62,7 +62,7 @@ module control_unit(
         // default
         imm_src = 3'b00;
 
-        unique case (opcode)
+        case (opcode)
         7'b0000011: imm_src = 3'b000; // Load (I-type)
         7'b0100011: imm_src = 3'b001; // Store (S-type)
         7'b0110011: imm_src = 3'b000; // R-type (no imm used)
@@ -85,45 +85,52 @@ module control_unit(
     // 011 = OR
     // 100 = XOR
     // ----------------------
-    always_comb begin
-        alu_control = 3'b000; // default ADD
+always_comb begin
+    alu_control = 3'b000; // default ADD
 
-        unique case (alu_op)
-            2'b00: begin
-                // simple add (e.g., PC+4, address calc)
-                alu_control = 3'b000;
-            end
+    case (alu_op)
+        2'b00: begin
+            // simple add (e.g., PC+4, address calc)
+            alu_control = 3'b000;
+        end
 
-            2'b01: begin
-                // branch compare (e.g., SUB)
-                alu_control = 3'b001;
-            end
+        2'b01: begin
+            // branch compare (e.g., SUB)
+            alu_control = 3'b001;
+        end
 
-            2'b10: begin
-                // R-type / I-type ALU operations
-                unique case (funct3)
-                    3'b000: begin
-                        // ADD / SUB depends on funct7[5]
-                        if (funct7[5]) begin
-                            alu_control = 3'b001; // SUB
-                        end else begin
-                            alu_control = 3'b000; // ADD
-                        end
+        2'b10: begin
+            // R-type / I-type ALU operations
+            case (funct3)
+                3'b000: begin
+                    // ADD / SUB depends on funct7[5]
+                    if (funct7[5]) begin
+                        alu_control = 3'b001; // SUB
+                    end else begin
+                        alu_control = 3'b000; // ADD
                     end
-                    3'b111: alu_control = 3'b010; // AND
-                    3'b110: alu_control = 3'b011; // OR
-                    3'b100: alu_control = 3'b100; // XOR
-                    3'b001: alu_control = 3'b101; // SLL
-                    3'b101: alu_control = funct7[5] ? 3'b111 : 3'b110; // SRA / SRL
-                    default: alu_control = 3'b000;
-                endcase
-            end
+                end
 
-            default: begin
-                alu_control = 3'b000;
-            end
-        endcase
-    end
+                3'b111: alu_control = 3'b010; // AND
+                3'b110: alu_control = 3'b011; // OR
+                3'b100: alu_control = 3'b100; // XOR
+                3'b001: alu_control = 3'b101; // SLL
+
+                // SRL / SRA (R-type or I-type)
+                3'b101: alu_control = funct7[5] ? 3'b111 : 3'b110;
+
+                // SLT handled by external compare logic, ALU can just do SUB/ADD
+                3'b010: alu_control = 3'b000; // SLT (handled externally)
+
+                default: alu_control = 3'b000;
+            endcase
+        end
+
+        default: begin
+            alu_control = 3'b000;
+        end
+    endcase
+end
 
     // ----------------------
     // Main FSM: generates control signals + next_state
@@ -141,7 +148,7 @@ module control_unit(
         mem_write  = 1'b0;
         reg_write  = 1'b0;
 
-        unique case (state)
+         case (state)
             FETCH: begin
                 adr_src    = 1'b0;      // PC as address
                 ir_write   = 1'b1;      // load instruction
@@ -163,26 +170,17 @@ module control_unit(
                 alu_src_a = 2'b01;  // PC
                 alu_src_b = 2'b01;  // imm (for branch target precompute)
                 alu_op    = 2'b00;  // ADD
-                branch     = 1'b0;
-                pc_update  = 1'b0;
-                ir_write   = 1'b0;
-                reg_write  = 1'b0;
-                mem_write  = 1'b0;
 
-                unique case (opcode)
+                 case (opcode)
                     7'b0000011: next_state = MEM_ADR;    // Load
                     7'b0100011: next_state = MEM_ADR;    // Store
                     7'b0110011: next_state = EXECUTE_R;  // R-type
                     7'b0010011: next_state = EXECUTE_I;  // I-type
                     7'b1101111: next_state = JAL;        // JAL
                     7'b1100011:begin
-                        unique case (funct3)
+                         case (funct3)
                             3'b000: next_state = BEQ;   // BEQ
-                            3'b001: next_state = BNE;   // BNE
                             3'b100: next_state = BLT;   // BLT
-                            3'b101: next_state = BGE;   // BGE
-                            3'b110: next_state = BLTU;  // BLTU
-                            3'b111: next_state = BGEU;  // BGEU
                             default: next_state = FETCH;
                         endcase
                     end
@@ -201,7 +199,7 @@ module control_unit(
                 alu_src_b = 2'b01; // imm
                 alu_op    = 2'b00; // ADD
 
-                unique case (opcode)
+                 case (opcode)
                     7'b0000011: next_state = MEM_READ;  // Load
                     7'b0100011: next_state = MEM_WRITE; // Store
                     default:    next_state = FETCH;

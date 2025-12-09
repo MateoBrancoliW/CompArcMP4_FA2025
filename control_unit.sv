@@ -17,7 +17,7 @@ module control_unit(
     output logic [1:0] alu_src_b,
     output logic [1:0] alu_src_a,
     output logic adr_src,
-    output logic [2:0] alu_control,
+    output logic [3:0] alu_control,
     output logic [2:0] imm_src
 );
 
@@ -114,7 +114,7 @@ always_comb begin
                 3'b111: alu_control = 3'b010; // AND
                 3'b110: alu_control = 3'b011; // OR
                 3'b100: alu_control = 3'b100; // XOR
-                3'b001: alu_control = 3'b101; // SLL
+                3'b001: alu_control = 4'b1000; // SLL
 
                 // SRL / SRA (R-type or I-type)
                 3'b101: alu_control = funct7[5] ? 3'b111 : 3'b110;

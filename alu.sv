@@ -46,7 +46,7 @@ module alu(
             `ALU_XOR: alu_c = alu_a ^ alu_b;
             `ALU_SLL: alu_c = alu_a <<  alu_b[4:0];
             `ALU_SRL: alu_c = alu_a >>  alu_b[4:0];
-            `ALU_SRA: alu_c = alu_a >>> alu_b[4:0];
+            `ALU_SRA: alu_c = $signed(alu_a) >>> alu_b[4:0];
             `ALU_SLT: begin
                 signed_less_than = $signed(alu_a) < $signed(alu_b);
                 zero = alu_c[0];

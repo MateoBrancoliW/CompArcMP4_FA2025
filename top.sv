@@ -42,7 +42,8 @@ module top (
     logic zero, pc_write, pc_update, reg_write, mem_write, ir_write;
     logic adr_src, less_than , signed_less_than;
     logic [1:0] result_src, alu_src_a, alu_src_b;
-    logic [2:0] alu_control, imm_src;
+    logic [2:0]  imm_src;
+    logic [3:0]  alu_control;
     logic [6:0]  funct7;
     logic[31:0] A, Data, instr, imm_ext, alu_a, alu_b, alu_c, write_data, read_data1, read_data2, next_pc, old_pc, rd_2_out, alu_out, res, adr;
 

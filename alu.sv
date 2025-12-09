@@ -24,9 +24,23 @@ module alu(
     always_comb begin
         alu_c = 32'b0;
         zero = 0;
+        less_than = 1'b0;
+        signed_less_than = 1'b0;
         case (alu_operation)
-            `ALU_ADD: alu_c = alu_a + alu_b;
-            `ALU_SUB: alu_c = alu_a - alu_b;
+            `ALU_ADD: begin
+                alu_c = alu_a + alu_b;
+                zero = 0
+            end
+            `ALU_SUB: begin 
+                alu_c = alu_a - alu_b;
+                if(alu_a == alu_b) begin
+                    zero = 1
+                end
+                else begin
+                    zero = 0
+                end
+            end
+
             `ALU_AND: alu_c = alu_a & alu_b;
             `ALU_OR:  alu_c = alu_a | alu_b;
             `ALU_XOR: alu_c = alu_a ^ alu_b;
@@ -39,10 +53,10 @@ module alu(
             end
             `ALU_SLTU: begin
                 alu_c = $unsigned(alu_a) < $unsigned(alu_b);
-                Zero = alu_c[0];
+                zero = alu_c[0];
             end
             default: begin
-            end
+            end1
         endcase
     end
 endmodule: alu

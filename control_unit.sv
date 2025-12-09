@@ -113,6 +113,8 @@ module control_unit(
                     3'b111: alu_control = 3'b010; // AND
                     3'b110: alu_control = 3'b011; // OR
                     3'b100: alu_control = 3'b100; // XOR
+                    3'b001: alu_control = 3'b101; // SLL
+                    3'b101: alu_control = funct7[5] ? 3'b111 : 3'b110; // SRA / SRL
                     default: alu_control = 3'b000;
                 endcase
             end
@@ -181,9 +183,9 @@ module control_unit(
                             3'b101: next_state = BGE;   // BGE
                             3'b110: next_state = BLTU;  // BLTU
                             3'b111: next_state = BGEU;  // BGEU
+                            default: next_state = FETCH;
                         endcase
                     end
-                        default: next_state = FETCH;
                     7'b0110111: next_state = LUI;        // LUI
                     7'b0010111: next_state = AUIPC;        // AUIPC
                     7'b1100111: next_state = JALR;       // JALR

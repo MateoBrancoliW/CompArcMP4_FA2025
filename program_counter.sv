@@ -6,9 +6,11 @@ module program_counter(
     input  logic [31:0] next_pc,
     output logic [31:0] pc
 );
-    always_ff @(posedge clk or posedge reset) begin
-        if (reset) begin
+    logic start = 1;
+    always_ff @(posedge clk) begin
+        if (start) begin
             pc <= 32'h1000;
+            start = 0;
         end 
         else if(pc_write) begin
             pc <= next_pc;

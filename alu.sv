@@ -34,11 +34,11 @@ module alu(
             `ALU_SRL: alu_c = alu_a >>  alu_b[4:0];
             `ALU_SRA: alu_c = alu_a >>> alu_b[4:0];
             `ALU_SLT: begin
-                signed_less_than = $signed(SrcA) < $signed(SrcB);
+                signed_less_than = $signed(alu_a) < $signed(alu_b);
                 zero = alu_c[0];
             end
             `ALU_SLTU: begin
-                alu_c = $unsigned(SrcA) < $unsigned(SrcB);
+                alu_c = $unsigned(alu_a) < $unsigned(alu_b);
                 Zero = alu_c[0];
             end
             default: begin

@@ -6,6 +6,8 @@ module control_unit(
     input  logic [6:0] opcode,
     input  logic [2:0] funct3,
     input  logic [6:0] funct7,
+    input  logic less_than,
+    input  logic signed_less_than,
     output logic pc_write,
     output logic pc_update,
     output logic reg_write,
@@ -20,30 +22,29 @@ module control_unit(
 );
 
     // FSM states
-    localparam FETCH      = 5'd0;
-    localparam DECODE     = 5'd1;
-    localparam MEM_ADR    = 5'd2;
-    localparam MEM_READ   = 5'd3;
-    localparam MEM_WB     = 5'd4;
-    localparam MEM_WRITE  = 5'd5;
-    localparam EXECUTE_R  = 5'd6;
-    localparam ALU_WB     = 5'd7;
-    localparam EXECUTE_I  = 5'd8;
+    localparam FETCH = 5'd0;
+    localparam DECODE = 5'd1;
+    localparam MEM_ADR = 5'd2;
+    localparam MEM_READ = 5'd3;
+    localparam MEM_WB = 5'd4;
+    localparam MEM_WRITE = 5'd5;
+    localparam EXECUTE_R = 5'd6;
+    localparam ALU_WB = 5'd7;
+    localparam EXECUTE_I = 5'd8;
     localparam JAL = 5'd9;
     localparam BEQ = 5'd10;
     localparam LUI = 5'd11;
-    localparam AUI = 5'd12;
+    localparam AUIPC = 5'd12;
     localparam JALR = 5'd13;
     localparam BNE = 5'd14;
     localparam BLT = 5'd15;
     localparam BGE = 5'd16;
     localparam BLTU = 5'd17;
     localparam BGEU = 5'd18;
-    localparam AUIPC = 5'd19;
 
     // State + control internals
-    logic [3:0] state = FETCH;
-    logic[3:0] next_state;
+    logic [4:0] state = FETCH;
+    logic[4:0] next_state;
     logic [1:0] alu_op;
     logic branch;
 
@@ -160,7 +161,6 @@ module control_unit(
                 alu_src_a = 2'b01;  // PC
                 alu_src_b = 2'b01;  // imm (for branch target precompute)
                 alu_op    = 2'b00;  // ADD
-
                 branch     = 1'b0;
                 pc_update  = 1'b0;
                 ir_write   = 1'b0;
@@ -173,9 +173,19 @@ module control_unit(
                     7'b0110011: next_state = EXECUTE_R;  // R-type
                     7'b0010011: next_state = EXECUTE_I;  // I-type
                     7'b1101111: next_state = JAL;        // JAL
-                    7'b1100011: next_state = BEQ;        // Branch (e.g., BEQ)
+                    7'b1100011:begin
+                        unique case (funct3)
+                            3'b000: next_state = BEQ;   // BEQ
+                            3'b001: next_state = BNE;   // BNE
+                            3'b100: next_state = BLT;   // BLT
+                            3'b101: next_state = BGE;   // BGE
+                            3'b110: next_state = BLTU;  // BLTU
+                            3'b111: next_state = BGEU;  // BGEU
+                        endcase
+                    end
+                        default: next_state = FETCH;
                     7'b0110111: next_state = LUI;        // LUI
-                    7'b0010111: next_state = AUI;        // AUIPC
+                    7'b0010111: next_state = AUIPC;        // AUIPC
                     7'b1100111: next_state = JALR;       // JALR
                     default:    next_state = FETCH;
                 endcase
@@ -264,40 +274,35 @@ module control_unit(
             end
 
             // ---------------
-            // AUI (AUIPC): PC + imm
+            // AUI: PC + imm
             // ---------------
-            AUI: begin
+            AUIPC: begin
+                alu_src_a = 2'b01; // use PC output
+                alu_src_b = 2'b01; // imm
+                alu_op    = 2'b00; // ADD 
+                next_state = ALU_WB;
+            end
+
+
+            JAL: begin
+                // PC+4 already computed in FETCH and stored somewhere;
+                // here we might compute target PC = PC + imm
+                pc_update = 1'b1; // update PC from ALU result
                 alu_src_a = 2'b01; // PC
                 alu_src_b = 2'b01; // imm
                 alu_op    = 2'b00; // ADD
                 result_src = 2'b00;
-                reg_write  = 1'b1;
-                next_state = FETCH;
-            end
-
-            // ---------------
-            // JAL: PC-relative jump, write rd = PC+4
-            // ---------------
-            JAL: begin
-                // PC+4 already computed in FETCH and stored somewhere;
-                // here we might compute target PC = PC + imm
-                alu_src_a = 2'b01; // PC
-                alu_src_b = 2'b01; // imm
-                alu_op    = 2'b00; // ADD
-                pc_update = 1'b1;  // update PC from ALU result
-                result_src = 2'b10; // (assume some path for PC+4 to rd)
-                reg_write  = 1'b1;
-                next_state = FETCH;
+                next_state = ALU_WB;
             end
 
             // ---------------
             // JALR: jump to rs1 + imm, write rd = PC+4
             // ---------------
             JALR: begin
+                pc_update = 1'b1;
                 alu_src_a = 2'b10; // rs1
                 alu_src_b = 2'b01; // imm
                 alu_op    = 2'b00; // ADD
-                pc_update = 1'b1;
                 result_src = 2'b10; // PC+4 to rd
                 reg_write  = 1'b1;
                 next_state = FETCH;
@@ -322,6 +327,92 @@ module control_unit(
                 next_state = FETCH;
             end
 
+                        // ---------------
+            // BNE: branch if rs1 != rs2
+            // ---------------
+            BNE: begin
+                alu_src_a  = 2'b10; // rs1
+                alu_src_b  = 2'b00; // rs2
+                alu_op     = 2'b01;
+                branch     = 1'b1;
+                result_src = 2'b00;
+
+                if (!zero) begin
+                    pc_update = 1'b1; // branch taken
+                end
+
+                next_state = FETCH;
+            end
+
+            // ---------------
+            // BLT: branch if rs1 < rs2 (signed)
+            // ---------------
+            BLT: begin
+                alu_src_a  = 2'b10; // rs1
+                alu_src_b  = 2'b00; // rs2
+                alu_op     = 2'b01;
+                branch     = 1'b1;
+                result_src = 2'b00;
+
+                if (signed_less_than) begin
+                    pc_update = 1'b1; // branch taken
+                end
+
+                next_state = FETCH;
+            end
+
+            // ---------------
+            // BGE: branch if rs1 >= rs2 (signed)
+            // ---------------
+            BGE: begin
+                alu_src_a  = 2'b10; // rs1
+                alu_src_b  = 2'b00; // rs2
+                alu_op     = 2'b01;
+                branch     = 1'b1;
+                result_src = 2'b00;
+
+                if (!signed_less_than) begin
+                    pc_update = 1'b1; // branch taken
+                end
+
+                next_state = FETCH;
+            end
+
+            // ---------------
+            // BLTU: branch if rs1 < rs2 (unsigned)
+            // ---------------
+            BLTU: begin
+                alu_src_a  = 2'b10; // rs1
+                alu_src_b  = 2'b00; // rs2
+                alu_op     = 2'b01;
+                branch     = 1'b1;
+                result_src = 2'b00;
+
+                if (less_than) begin
+                    pc_update = 1'b1; // branch taken
+                end
+
+                next_state = FETCH;
+            end
+
+            // ---------------
+            // BGEU: branch if rs1 >= rs2 (unsigned)
+            // ---------------
+            BGEU: begin
+                alu_src_a  = 2'b10; // rs1
+                alu_src_b  = 2'b00; // rs2
+                alu_op     = 2'b01;
+                branch     = 1'b1;
+                result_src = 2'b00;
+
+                if (!less_than) begin
+                    pc_update = 1'b1; // branch taken
+                end
+
+                next_state = FETCH;
+            end
+
+
             default: begin
                 next_state = FETCH;
             end
@@ -329,6 +420,6 @@ module control_unit(
     end
 
     // pc_write: actual write-enable for PC
-    assign pc_write = pc_update | (branch & zero);
+    assign pc_write = pc_update;
 
 endmodule

@@ -86,7 +86,7 @@ module top (
         .rs1            (instr[19:15]),
         .rs2            (instr[24:20]),
         .rd             (instr[11:7]),
-        .write_data     (write_data),
+        .write_data     (res),
         .reg_write      (reg_write),
         .read_data1     (read_data1),
         .read_data2     (read_data2)
@@ -98,6 +98,8 @@ module top (
         .opcode         (instr[6:0]),
         .funct3         (instr[14:12]),
         .funct7         (instr[31:25]),
+        .less_than      (less_than),
+        .signed_less_than (signed_less_than),
         .pc_write         (pc_write),
         .pc_update      (pc_update),
         .reg_write      (reg_write),

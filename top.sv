@@ -159,8 +159,18 @@ module top (
     end
 
     always_ff @(posedge clk)begin 
+        if (instr[6:0] == 7'b0100011) begin
+            case (instr[14:12])
+            3'b000: write_data <= read_data2[7:0];
+            3'b001: write_data <= read_data2[15:0];
+            3'b010: write_data <= read_data2[31:0];
+            default write_data <= read_data2;
+            endcase
+        end
+        else begin
+            write_data <= read_data2;
+        end
         A <= read_data1;
-        write_data <= read_data2;
         rd_2_out <= read_data2;
     end
     always_ff @(posedge clk) begin
